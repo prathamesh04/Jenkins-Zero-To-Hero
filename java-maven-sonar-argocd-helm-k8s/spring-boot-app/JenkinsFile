@@ -72,8 +72,8 @@ pipeline {
           sh '''
             set -e
 
-            git config user.email "jenkins@example.com"
-            git config user.name "jenkins"
+            git config user.email "prathamhukkeri04@gmail.com"
+            git config user.name "Prathamesh Hukkeri"
 
             cd $WORKSPACE
 

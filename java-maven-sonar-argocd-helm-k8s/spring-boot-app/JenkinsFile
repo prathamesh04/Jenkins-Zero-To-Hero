@@ -1,5 +1,6 @@
-agent {
-  docker {
+pipeline {
+  agent {
+    docker {
     image 'pratham8899/jenkins-agent:v1'
     args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
   }

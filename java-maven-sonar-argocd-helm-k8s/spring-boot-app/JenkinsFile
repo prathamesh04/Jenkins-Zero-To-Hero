@@ -1,24 +1,23 @@
 pipeline {
-  agent {
-    docker {
-      image 'pratham8899/jenkins-agent:v1'
-      args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
-    }
-  }
+  agent any   // IMPORTANT CHANGE
 
   stages {
 
     stage('Checkout') {
       steps {
-        sh 'echo passed'
-        //git branch: 'main', url: 'https://github.com/prathamesh04/Jenkins-Zero-To-Hero.git'
+        checkout scm
       }
     }
 
     stage('Build and Test') {
+      agent {
+        docker {
+          image 'pratham8899/jenkins-agent:v1'
+          args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
+        }
+      }
       steps {
         sh '''
-          ls -ltr
           cd java-maven-sonar-argocd-helm-k8s/spring-boot-app
           mvn clean package
         '''
@@ -45,7 +44,6 @@ pipeline {
       environment {
         DOCKER_IMAGE = "pratham8899/ultimate-cicd:${BUILD_NUMBER}"
       }
-
       steps {
         script {
           sh '''
@@ -63,33 +61,29 @@ pipeline {
     }
 
     stage('Update Deployment File') {
-      environment {
-        GIT_REPO_NAME = "Jenkins-Zero-To-Hero"
-        GIT_USER_NAME = "prathamesh04"
-      }
-
       steps {
         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
           sh '''
             set -e
 
-            git config user.email "prathamhukkeri04@gmail.com"
-            git config user.name "Prathamesh Hukkeri"
+            git config user.email "jenkins@example.com"
+            git config user.name "jenkins"
 
-            cd $WORKSPACE
-
+            pwd
+            ls -la
             git status
 
             sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
             git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
-            git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "No changes to commit"
+            git commit -m "Update image ${BUILD_NUMBER}" || echo "No changes"
 
             git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git HEAD:main
           '''
         }
       }
     }
+
   }
 }

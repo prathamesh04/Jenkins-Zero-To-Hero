@@ -10,7 +10,7 @@ pipeline {
 
     stage('Checkout') {
       steps {
-        sh 'echo passed'
+        sh 'echo "Passed automatic checkout step"'
       }
     }
 
@@ -61,35 +61,28 @@ pipeline {
     }
 
     stage('Update Deployment File') {
-      agent any   
-
       environment {
         GIT_USER_NAME = "prathamesh04"
         GIT_REPO_NAME = "Jenkins-Zero-To-Hero"
+        // Mapping Jenkins env variable to an environment parameter makes it safely accessible in single quotes
+        CURRENT_BUILD = "${BUILD_NUMBER}" 
       }
-
       steps {
         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-          // Back to single quotes (''') to ensure Jenkins environment handling remains secure
           sh '''
             set -e
 
             git config user.email "jenkins@example.com"
             git config user.name "jenkins"
 
-            cd "$WORKSPACE"
-
-            # Safely hand off the Jenkins variable to the shell environment context
-            LOCAL_BUILD_NUM="${BUILD_NUMBER}"
-
-            sed -i "s/replaceImageTag/${LOCAL_BUILD_NUM}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+            # Use the environment variable mapped above safely within single quotes
+            sed -i "s/replaceImageTag/${CURRENT_BUILD}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
             git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
-            git commit -m "Update image version to ${LOCAL_BUILD_NUM}" || echo "No changes to commit"
+            git commit -m "Update image version to ${CURRENT_BUILD}" || echo "No changes to commit"
 
-            # Use standard shell expansion ($GITHUB_TOKEN) so Jenkins handles masking seamlessly
-            git push https://$GITHUB_TOKEN@github.com/$GIT_USER_NAME/$GIT_REPO_NAME.git HEAD:main
+            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git HEAD:main
           '''
         }
       }

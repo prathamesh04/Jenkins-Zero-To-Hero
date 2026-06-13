@@ -2,7 +2,7 @@ pipeline {
   agent {
     docker {
       image 'pratham8899/jenkins-agent:v1'
-      args '-v $WORKSPACE:$WORKSPACE -w $WORKSPACE --user root -v /var/run/docker.sock:/var/run/docker.sock'
+      args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
     }
   }
 

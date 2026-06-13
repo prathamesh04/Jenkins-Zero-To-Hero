@@ -71,21 +71,31 @@ pipeline {
           sh '''
             set -e
 
-            # 1. Force the shell to move into the Jenkins workspace directory
             cd "$WORKSPACE"
 
-            # 2. Configure local Git identity
+            # 1. Mark this workspace folder as safe to avoid ownership/permission blocks
+            git config --global --add safe.directory "$WORKSPACE"
+
+            # 2. If for some reason the container doesn't see .git, re-initialize it dynamically
+            if [ ! -d ".git" ]; then
+              echo "No .git directory found. Initializing and fetching repository..."
+              git init
+              git remote add origin https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git
+              git fetch
+              git checkout main
+            fi
+
+            # 3. Configure identity parameters
             git config user.email "jenkins@example.com"
             git config user.name "jenkins"
 
-            # 3. Update the deployment manifest file
+            # 4. Modify the deployment tag
             sed -i "s/replaceImageTag/${CURRENT_BUILD}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
-            # 4. Stage, commit, and push changes back to GitHub
+            # 5. Commit and push the manifest modification
             git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-
             git commit -m "Update image version to ${CURRENT_BUILD}" || echo "No changes to commit"
-
+            
             git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git HEAD:main
           '''
         }

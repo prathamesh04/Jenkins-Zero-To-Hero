@@ -61,7 +61,6 @@ pipeline {
     }
 
     stage('Update Deployment File') {
-      // Moves the execution out of the isolated docker agent container back to the host node
       agent any   
 
       environment {
@@ -71,27 +70,27 @@ pipeline {
 
       steps {
         withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-          // Changed to double quotes (""") so Jenkins interprets ${BUILD_NUMBER} properly
-          sh """
+          // Back to single quotes (''') to ensure Jenkins environment handling remains secure
+          sh '''
             set -e
 
             git config user.email "jenkins@example.com"
             git config user.name "jenkins"
 
-            cd ${WORKSPACE}
+            cd "$WORKSPACE"
 
-            ls -la
-            git status
+            # Safely hand off the Jenkins variable to the shell environment context
+            LOCAL_BUILD_NUM="${BUILD_NUMBER}"
 
-            sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+            sed -i "s/replaceImageTag/${LOCAL_BUILD_NUM}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
             git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
-            # Prevent failure if no changes were made
-            git commit -m "Update image version to ${BUILD_NUMBER}" || echo "No changes to commit"
+            git commit -m "Update image version to ${LOCAL_BUILD_NUM}" || echo "No changes to commit"
 
-            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git HEAD:main
-          """
+            # Use standard shell expansion ($GITHUB_TOKEN) so Jenkins handles masking seamlessly
+            git push https://$GITHUB_TOKEN@github.com/$GIT_USER_NAME/$GIT_REPO_NAME.git HEAD:main
+          '''
         }
       }
     }
